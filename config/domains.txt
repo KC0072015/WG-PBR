@@ -1,0 +1,10 @@
+# Domains routed through Surfshark — one per line.
+# Blank lines and lines starting with # are ignored.
+# Subdomains are automatically included (e.g. "netflix.com" covers www.netflix.com).
+#
+# After editing this file, restart the container:
+#   docker compose restart
+
+claude.ai
+anthropic.com
+netflix.com

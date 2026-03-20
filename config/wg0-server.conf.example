@@ -1,0 +1,25 @@
+# WireGuard SERVER config — copy this to wg0-server.conf and fill in your keys.
+#
+# Generate server keys (run on any machine with wireguard-tools):
+#   wg genkey | tee server_private.key | wg pubkey > server_public.key
+#
+# Generate a client key pair the same way:
+#   wg genkey | tee client1_private.key | wg pubkey > client1_public.key
+
+[Interface]
+PrivateKey = <SERVER_PRIVATE_KEY>
+ListenPort = 51820
+
+# -----------------------------------------------------------------------
+# Add one [Peer] block per client device
+# -----------------------------------------------------------------------
+
+[Peer]
+# Client 1 — e.g. laptop
+PublicKey  = <CLIENT1_PUBLIC_KEY>
+AllowedIPs = 10.8.0.2/32
+
+# [Peer]
+# # Client 2 — e.g. phone
+# PublicKey  = <CLIENT2_PUBLIC_KEY>
+# AllowedIPs = 10.8.0.3/32
