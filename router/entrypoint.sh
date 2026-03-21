@@ -179,10 +179,10 @@ start_dnsmasq() {
         --no-daemon \
         --log-facility=- \
         --log-queries=extra 2>&1 | visit_logger &
+    PIPELINE_PID=$!
     sleep 1
     DNSMASQ_PID=$(pgrep -n dnsmasq || true)
 }
-
 log "Starting dnsmasq..."
 start_dnsmasq
 
