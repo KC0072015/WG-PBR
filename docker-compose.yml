@@ -12,11 +12,11 @@ services:
     devices:
       - /dev/net/tun
     ports:
-      - "${WG_PORT:-51820}:51820/udp"
+      - "${WG_PORT:-51822}:51822/udp"
     volumes:
       # Secret configs — stored on the NAS at SECRETS_PATH, NOT in Git
-      - ${SECRETS_PATH}/wg0-server.conf:/etc/wireguard/wg0.conf:ro
-      - ${SECRETS_PATH}/surfshark.conf:/etc/wireguard/wg1.conf:ro
+      - "${SECRETS_PATH}/wg0-server.conf:/etc/wireguard/wg0.conf:ro"
+      - "${SECRETS_PATH}/surfshark.conf:/etc/wireguard/wg1.conf:ro"
       # Domain list — lives in the Git repo, edit & push to update routing
       - ./config/domains.txt:/etc/pbr/domains.txt:ro
     environment:

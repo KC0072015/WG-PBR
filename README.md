@@ -7,10 +7,13 @@ A single Docker container that runs on **TrueNAS Scale** providing:
 - **Policy-Based Routing (PBR)** — per-domain split routing:
   - Domains in `config/domains.txt` → exit via **Surfshark**
   - Everything else → exit via **home IP**
+- **AdGuard Home integration** — DNS forwarded to your AdGuard instance
+- **Live domain updates** — edit `domains.txt` and routing updates automatically within 30 seconds, no restart needed
+- **Visit logging** — logs every time a connected client queries a Surfshark-routed domain
 
 ```
 [Your Device]
-     │ WireGuard (UDP 51820)
+     │ WireGuard (UDP 51822)
      ▼
 ┌─────────────────────────────────┐
 │         pbr-vpn container       │
@@ -29,36 +32,41 @@ A single Docker container that runs on **TrueNAS Scale** providing:
 | What | Where | In Git? |
 |---|---|---|
 | `router/` code, `domains.txt` | This repo | ✅ Yes |
-| `wg0-server.conf` (WireGuard server + peer keys) | NAS filesystem only | ❌ No |
-| `surfshark.conf` (Surfshark private key) | NAS filesystem only | ❌ No |
-
-Portainer is told where the secrets live via the `SECRETS_PATH` environment variable.
+| `wg0-server.conf` (WireGuard server + peer keys) | `secrets/` on NAS only | ❌ No |
+| `surfshark.conf` (Surfshark private key) | `secrets/` on NAS only | ❌ No |
 
 ---
 
 ## Prerequisites
 
-- TrueNAS Scale with Docker + Portainer
-- Port **51820/UDP** forwarded on your router → TrueNAS IP
-- A DDNS hostname pointing to your public IP (e.g. `myhome.duckdns.org`)
-- A Surfshark account
+- TrueNAS Scale with Docker
+- Port **51822/UDP** forwarded on your router → TrueNAS IP
+- A Surfshark account with WireGuard config downloaded
 - `wireguard-tools` installed locally (to generate key pairs)
 
 ---
 
-## One-time setup on TrueNAS (SSH)
+## One-time setup
 
-### Step 1 — Create the secrets directory
+### Step 1 — Clone the repo on TrueNAS (SSH)
 
 ```bash
-mkdir -p /opt/pbr-vpn-secrets
+cd /mnt/<your-pool>/appdata
+git clone https://github.com/YOUR_USERNAME/nas-pbr-vpn
+cd nas-pbr-vpn
 ```
 
-### Step 2 — Generate WireGuard server keys
+### Step 2 — Create the secrets directory
 
 ```bash
-# On your Mac/PC (with wireguard-tools), or inside any Alpine container
-wg genkey | tee server_private.key | wg pubkey > server_public.key
+mkdir -p secrets
+```
+
+### Step 3 — Generate WireGuard server keys
+
+```bash
+# Run on any machine with wireguard-tools, or inside any Alpine container
+wg genkey | tee secrets/server_private.key | wg pubkey > secrets/server_public.key
 ```
 
 Generate a key pair for each client device:
@@ -67,71 +75,51 @@ Generate a key pair for each client device:
 wg genkey | tee client1_private.key | wg pubkey > client1_public.key
 ```
 
-### Step 3 — Create wg0-server.conf
+### Step 4 — Create secrets/wg0-server.conf
 
-```bash
-cat > /opt/pbr-vpn-secrets/wg0-server.conf << 'EOF'
+```ini
 [Interface]
 PrivateKey = <SERVER_PRIVATE_KEY>
-ListenPort = 51820
+ListenPort = 51822
 
 [Peer]
 # Client 1 — e.g. laptop
 PublicKey  = <CLIENT1_PUBLIC_KEY>
 AllowedIPs = 10.8.0.2/32
-EOF
+
+[Peer]
+# Client 2 — e.g. phone
+PublicKey  = <CLIENT2_PUBLIC_KEY>
+AllowedIPs = 10.8.0.3/32
 ```
 
-Add more `[Peer]` blocks for additional devices (10.8.0.3/32, 10.8.0.4/32, …).
+Add more `[Peer]` blocks for additional devices (10.8.0.4/32, …).
+See `config/wg0-server.conf.example` for reference.
 
-### Step 4 — Get Surfshark WireGuard config
+### Step 5 — Get Surfshark WireGuard config
 
 1. Log in at [my.surfshark.com](https://my.surfshark.com)
 2. Go to **VPN → Manual setup → Router → WireGuard**
 3. Pick a server location and download the `.conf` file
-4. Copy it to the NAS:
+4. Copy it to the secrets folder:
 
 ```bash
-# From your Mac
-scp surfshark-download.conf root@<truenas-ip>:/opt/pbr-vpn-secrets/surfshark.conf
+cp surfshark-download.conf secrets/surfshark.conf
 ```
 
----
+### Step 6 — Configure environment
 
-## Deploy with Portainer
+```bash
+cp .env.example .env
+# Edit .env and set SECRETS_PATH to the absolute path of your secrets/ folder
+```
 
-### Step 1 — Add the stack
+### Step 7 — Deploy
 
-In Portainer: **Stacks → Add Stack → Repository**
-
-| Field | Value |
-|---|---|
-| Name | `pbr-vpn` |
-| Repository URL | `https://github.com/YOUR_USERNAME/nas-pbr-vpn` |
-| Repository reference | `refs/heads/main` |
-| Compose path | `docker-compose.yml` |
-| Authentication | (only needed for private repos) |
-
-### Step 2 — Set environment variables
-
-In the **Environment variables** section of the stack, add:
-
-| Variable | Value |
-|---|---|
-| `SECRETS_PATH` | `/opt/pbr-vpn-secrets` |
-| `WG_PORT` | `51820` |
-| `WG_SERVER_SUBNET` | `10.8.0.0/24` |
-| `WG_SERVER_IP` | `10.8.0.1` |
-
-### Step 3 — Enable auto-update (optional but recommended)
-
-Enable **"GitOps updates"** / **"Auto update"** in Portainer. With this on, pushing to the `main` branch (e.g. updating `domains.txt`) will automatically redeploy the stack.
-
-### Step 4 — Deploy
-
-Click **Deploy the stack**. Portainer will clone the repo, build the image, and start the container.
-
-Check logs in Portainer → Containers → `pbr-vpn` → Logs.
+```bash
+docker compose up --build -d
+docker compose logs -f
+```
 
 ---
 
@@ -147,28 +135,52 @@ DNS        = 10.8.0.1
 
 [Peer]
 PublicKey           = <SERVER_PUBLIC_KEY>
-Endpoint            = myhome.duckdns.org:51820
+Endpoint            = <YOUR-NAS-IP-OR-DDNS>:51822
 AllowedIPs          = 0.0.0.0/0
 PersistentKeepalive = 25
 ```
 
-Import this into the WireGuard app on your device and connect.
+> **Important:** `DNS = 10.8.0.1` is required. This points the client at the container's dnsmasq, which is what populates the ipset and triggers PBR routing. Without it, domain-based routing will not work.
 
 ---
 
 ## Managing domains
 
-Edit [config/domains.txt](config/domains.txt) in this repo — one domain per line:
+Edit [config/domains.txt](config/domains.txt) — one domain per line, comments with `#`:
 
 ```
-claude.ai
+# Streaming
 netflix.com
-youtube.com
+
+# AI
+claude.ai
+anthropic.com
 ```
 
-Commit and push. If auto-update is enabled in Portainer, it redeploys automatically. Otherwise, click **Pull and redeploy** in Portainer.
+The container polls for changes every 30 seconds. When a change is detected it automatically rebuilds the dnsmasq config and restarts dnsmasq — **no redeploy needed**. You will see in the logs:
 
-Subdomains are included automatically (`netflix.com` covers `www.netflix.com`, etc.).
+```
+[pbr] domains.txt changed — rebuilding config and restarting dnsmasq...
+[pbr] dnsmasq restarted (PID 123) — new domains are active.
+```
+
+Subdomains are covered automatically (`netflix.com` matches `www.netflix.com`, etc.).
+
+---
+
+## Visit logging
+
+Whenever a connected client queries a Surfshark-routed domain, the container logs it:
+
+```
+[pbr] VISIT 10.8.0.2 → netflix.com (via Surfshark)
+```
+
+Watch live:
+
+```bash
+docker compose logs -f
+```
 
 ---
 
@@ -188,26 +200,26 @@ docker exec pbr-vpn ip rule show
 docker exec pbr-vpn ip route show table 100
 ```
 
-**Test exit IPs while connected:**
-- Browse to `ifconfig.me` — should show your **home IP**
-- Browse to a site in `domains.txt` then check `ifconfig.me` again — the exit IP should be a **Surfshark IP**
+**Test exit IPs while connected via WireGuard:**
+- `curl https://ipinfo.io/ip` — should show your **home IP**
+- Browse to a domain in `domains.txt`, then check again — should show a **Surfshark IP**
 
 ---
 
 ## Adding a new client device
 
-1. Generate a key pair for the new device (Step 2 above)
-2. SSH into TrueNAS and append a `[Peer]` block to `/opt/pbr-vpn-secrets/wg0-server.conf`
-3. In Portainer, click **Pull and redeploy** (or restart the container — WireGuard peers are read at startup)
+1. Generate a key pair for the new device (Step 3 above)
+2. Append a `[Peer]` block to `secrets/wg0-server.conf`
+3. Restart the container: `docker compose restart`
 4. Configure the WireGuard app on the new device
 
 ---
 
 ## TrueNAS Scale notes
 
-- If the container logs show a WireGuard error, SSH in and run `modprobe wireguard`, then redeploy.
-- The stack requires `NET_ADMIN` + `SYS_MODULE` capabilities — standard for VPN containers.
-- Port 51820/UDP must be forwarded on your home router to the TrueNAS IP.
+- WireGuard is built into the TrueNAS kernel — `modprobe wireguard` may print a warning but the module is available.
+- The container requires `NET_ADMIN` + `SYS_MODULE` capabilities — standard for VPN containers.
+- Port 51822/UDP must be forwarded on your home router to the TrueNAS IP.
 
 ---
 
@@ -215,21 +227,23 @@ docker exec pbr-vpn ip route show table 100
 
 ```
 .
-├── docker-compose.yml            ← Portainer deploys this
-├── .env.example                  ← reference for env vars to set in Portainer
-├── .gitignore                    ← excludes secret configs
+├── docker-compose.yml
+├── .env.example                  ← copy to .env and fill in SECRETS_PATH
+├── .gitignore
 ├── router/
 │   ├── Dockerfile
-│   ├── entrypoint.sh             ← tunnel setup, PBR, dnsmasq
-│   └── dnsmasq.conf.tpl
+│   ├── entrypoint.sh             ← tunnel setup, PBR, dnsmasq, domain watcher
+│   └── dnsmasq.conf.tpl          ← dnsmasq base config (upstream DNS etc.)
 └── config/
     ├── domains.txt               ← edit this to control routing
-    └── wg0-server.conf.example   ← reference only, real file lives on NAS
+    └── wg0-server.conf.example   ← reference only, real file lives in secrets/
 ```
 
-Secrets (NOT in this repo):
+Secrets (NOT in this repo — lives on your NAS):
 ```
-/opt/pbr-vpn-secrets/
-├── wg0-server.conf   ← WireGuard server config + peer keys
-└── surfshark.conf    ← Surfshark WireGuard config
+secrets/
+├── wg0-server.conf        ← WireGuard server config + peer public keys
+├── surfshark.conf         ← Surfshark WireGuard config
+├── server_private.key     ← server private key
+└── server_public.key      ← server public key
 ```

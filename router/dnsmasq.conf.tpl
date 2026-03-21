@@ -7,9 +7,8 @@ bind-interfaces
 # Don't read /etc/resolv.conf (we set upstreams explicitly)
 no-resolv
 
-# Upstream DNS servers (Cloudflare + Google)
-server=1.1.1.1
-server=8.8.8.8
+# Upstream DNS server (AdGuard Home)
+server=10.0.1.15
 
 # Cache settings
 cache-size=1000

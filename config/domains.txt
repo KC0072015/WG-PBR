@@ -5,6 +5,13 @@
 # After editing this file, restart the container:
 #   docker compose restart
 
+
+# for checking my ip
+
+# Services
 claude.ai
 anthropic.com
-netflix.com
+chatgpt.com
+openai.com
+gemini.google.com
+notebooklm.google.com

@@ -1,0 +1,9 @@
+# Secret configs — never commit these, they contain private keys
+secrets/
+
+# Local env overrides
+.env
+
+# OS junk
+.DS_Store
+Thumbs.db
