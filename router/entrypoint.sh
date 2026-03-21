@@ -100,7 +100,8 @@ build_dnsmasq_conf() {
     sed "s/%%INTERNAL_DNS_IP%%/${INTERNAL_DNS_IP}/" /etc/pbr/dnsmasq.conf.tpl > "$DNSMASQ_CONF"
     if [[ -f "$DOMAINS_FILE" ]]; then
         while IFS= read -r domain || [[ -n "$domain" ]]; do
-            domain="${domain// /}"
+            domain="${domain%%#*}"           # strip inline comments
+            domain="${domain//[$'\t ']/}"   # strip spaces and tabs
             [[ -z "$domain" ]] && continue
             [[ "$domain" == \#* ]] && continue
             echo "ipset=/${domain}/${IPSET_NAME}" >> "$DNSMASQ_CONF"
@@ -158,7 +159,8 @@ visit_logger() {
             client=$(echo "$line" | grep -oE 'from [0-9.]+' | awk '{print $2}' || true)
             if [[ -n "$domain" && -f "$DOMAINS_FILE" ]]; then
                 while IFS= read -r tracked || [[ -n "$tracked" ]]; do
-                    tracked="${tracked// /}"
+                    tracked="${tracked%%#*}"
+                    tracked="${tracked//[$'\t ']/}"
                     [[ -z "$tracked" || "$tracked" == \#* ]] && continue
                     if [[ "$domain" == "$tracked" || "$domain" == *."$tracked" ]]; then
                         echo "[pbr] VISIT ${client:-unknown} → $domain (via Surfshark)"
