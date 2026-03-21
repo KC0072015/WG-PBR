@@ -22,3 +22,4 @@ services:
     environment:
       - WG_SERVER_SUBNET=${WG_SERVER_SUBNET:-10.8.0.0/24}
       - WG_SERVER_IP=${WG_SERVER_IP:-10.8.0.1}
+      - INTERNAL_DNS_IP=${INTERNAL_DNS_IP:-10.0.1.15}

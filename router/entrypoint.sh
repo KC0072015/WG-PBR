@@ -3,6 +3,7 @@ set -euo pipefail
 
 WG_SERVER_SUBNET="${WG_SERVER_SUBNET:-10.8.0.0/24}"
 WG_SERVER_IP="${WG_SERVER_IP:-10.8.0.1}"
+INTERNAL_DNS_IP="${INTERNAL_DNS_IP:-10.0.1.15}"
 DOMAINS_FILE="/etc/pbr/domains.txt"
 DNSMASQ_CONF="/etc/pbr/dnsmasq.conf"
 WG0_CONF="/etc/wireguard/wg0.conf"
@@ -96,7 +97,7 @@ ipset create "$IPSET_NAME" hash:ip -exist
 # 7. Build dnsmasq config from template + domains list
 # ---------------------------------------------------------------------------
 build_dnsmasq_conf() {
-    cp /etc/pbr/dnsmasq.conf.tpl "$DNSMASQ_CONF"
+    sed "s/%%INTERNAL_DNS_IP%%/${INTERNAL_DNS_IP}/" /etc/pbr/dnsmasq.conf.tpl > "$DNSMASQ_CONF"
     if [[ -f "$DOMAINS_FILE" ]]; then
         while IFS= read -r domain || [[ -n "$domain" ]]; do
             domain="${domain// /}"

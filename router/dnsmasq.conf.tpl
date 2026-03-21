@@ -7,8 +7,8 @@ bind-interfaces
 # Don't read /etc/resolv.conf (we set upstreams explicitly)
 no-resolv
 
-# Upstream DNS server (AdGuard Home)
-server=10.0.1.15
+# Upstream DNS server — IP substituted at runtime from INTERNAL_DNS_IP
+server=%%INTERNAL_DNS_IP%%
 
 # Cache settings
 cache-size=1000
