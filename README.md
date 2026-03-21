@@ -50,9 +50,9 @@ A single Docker container that runs on **TrueNAS Scale** providing:
 
 ### Step 1 — Clone the repo on TrueNAS (SSH)
 
+Find a preferred place in your NAS
 ```bash
-cd /mnt/<your-pool>/appdata
-git clone https://github.com/YOUR_USERNAME/nas-pbr-vpn
+git clone https://github.com/KC0072015/WG-PBR
 cd nas-pbr-vpn
 ```
 
@@ -70,10 +70,10 @@ wg genkey | tee secrets/server_private.key | wg pubkey > secrets/server_public.k
 ```
 
 Generate a key pair for each client device:
-
 ```bash
 wg genkey | tee client1_private.key | wg pubkey > client1_public.key
 ```
+* You can generate it using your device's Wireguard app as well.
 
 ### Step 4 — Create secrets/wg0-server.conf
 
@@ -96,7 +96,9 @@ AllowedIPs = 10.8.0.3/32
 Add more `[Peer]` blocks for additional devices (10.8.0.4/32, …).
 See `config/wg0-server.conf.example` for reference.
 
-### Step 5 — Get Surfshark WireGuard config
+### Step 5 — Get a secondary VPN config
+
+#### Surfshark WireGuard 
 
 1. Log in at [my.surfshark.com](https://my.surfshark.com)
 2. Go to **VPN → Manual setup → Router → WireGuard**
@@ -106,6 +108,8 @@ See `config/wg0-server.conf.example` for reference.
 ```bash
 cp surfshark-download.conf secrets/surfshark.conf
 ```
+
+#### Others: Please check your VPN Serice provider for details
 
 ### Step 6 — Configure environment
 
@@ -130,7 +134,7 @@ For each device, create a WireGuard client config:
 ```ini
 [Interface]
 PrivateKey = <CLIENT_PRIVATE_KEY>
-Address    = 10.8.0.2/24
+Address    = <Put in the address you have stated in secrets/wg0-server.conf>/24 
 DNS        = 10.8.0.1
 
 [Peer]
@@ -201,8 +205,8 @@ docker exec pbr-vpn ip route show table 100
 ```
 
 **Test exit IPs while connected via WireGuard:**
-- `curl https://ipinfo.io/ip` — should show your **home IP**
-- Browse to a domain in `domains.txt`, then check again — should show a **Surfshark IP**
+- `curl https://ipinfo.io/ip` — should show your **current IP**
+- Browse to a domain in `domains.txt`, then check again — should show a **VPN IP**
 
 ---
 
