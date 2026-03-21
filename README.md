@@ -115,8 +115,16 @@ cp surfshark-download.conf secrets/surfshark.conf
 
 ```bash
 cp .env.example .env
-# Edit .env and set SECRETS_PATH to the absolute path of your secrets/ folder
+# Edit .env — at minimum set SECRETS_PATH and INTERNAL_DNS_IP for your setup
 ```
+
+| Variable | Description | Default |
+|---|---|---|
+| `SECRETS_PATH` | Absolute path to your secrets directory on the NAS | *(required)* |
+| `WG_PORT` | UDP port exposed for WireGuard clients | `51822` |
+| `WG_SERVER_SUBNET` | VPN subnet assigned to WireGuard clients | `10.8.0.0/24` |
+| `WG_SERVER_IP` | IP of the WireGuard server inside the VPN | `10.8.0.1` |
+| `INTERNAL_DNS_IP` | IP of your internal DNS server (AdGuard Home, Pi-hole, etc.) used by dnsmasq as upstream | `10.0.1.15` |
 
 ### Step 7 — Deploy
 
@@ -232,7 +240,7 @@ docker exec pbr-vpn ip route show table 100
 ```
 .
 ├── docker-compose.yml
-├── .env.example                  ← copy to .env and fill in SECRETS_PATH
+├── .env.example                  ← copy to .env and fill in SECRETS_PATH, INTERNAL_DNS_IP, etc.
 ├── .gitignore
 ├── router/
 │   ├── Dockerfile
