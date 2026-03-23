@@ -18,7 +18,7 @@ services:
       - "${SECRETS_PATH}/wg0-server.conf:/etc/wireguard/wg0.conf:ro"
       - "${SECRETS_PATH}/surfshark.conf:/etc/wireguard/wg1.conf:ro"
       # Domain list — lives in the Git repo, edit & push to update routing
-      - ./config/domains.txt:/etc/pbr/domains.txt:ro
+      - ./config:/etc/pbr/config:ro
     environment:
       - WG_SERVER_SUBNET=${WG_SERVER_SUBNET:-10.8.0.0/24}
       - WG_SERVER_IP=${WG_SERVER_IP:-10.8.0.1}

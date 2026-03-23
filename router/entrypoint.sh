@@ -4,7 +4,7 @@ set -euo pipefail
 WG_SERVER_SUBNET="${WG_SERVER_SUBNET:-10.8.0.0/24}"
 WG_SERVER_IP="${WG_SERVER_IP:-10.8.0.1}"
 INTERNAL_DNS_IP="${INTERNAL_DNS_IP:-10.0.1.15}"
-DOMAINS_FILE="/etc/pbr/domains.txt"
+DOMAINS_FILE="/etc/pbr/config/domains.txt"
 DNSMASQ_CONF="/etc/pbr/dnsmasq.conf"
 WG0_CONF="/etc/wireguard/wg0.conf"
 WG1_CONF="/etc/wireguard/wg1.conf"
